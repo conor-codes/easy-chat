@@ -1,0 +1,11 @@
+# Stop PostgreSQL
+docker stop easychat-postgres
+
+# Start PostgreSQL again
+docker start easychat-postgres
+
+# Delete PostgreSQL (removes all data)
+docker rm -f easychat-postgres
+
+# See logs (if something breaks)
+docker logs easychat-postgres
