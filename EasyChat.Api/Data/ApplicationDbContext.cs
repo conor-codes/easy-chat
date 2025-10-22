@@ -4,7 +4,7 @@ using EasyChat.Shared.Models.EasyChat.Shared.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-namespace EasyChat.Api.data
+namespace EasyChat.Api.Data
 {
     public class ApplicationDbContext : IdentityDbContext
     {

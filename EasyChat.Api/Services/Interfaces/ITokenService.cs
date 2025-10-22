@@ -4,6 +4,6 @@ namespace EasyChat.Api.Services.Interfaces
 {
     public interface ITokenService
     {
-        string GenerateToken(IdentityUser user);
+        public string GenerateToken(IdentityUser user);
     }
 }

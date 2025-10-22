@@ -24,6 +24,7 @@ namespace EasyChat.Api.Controllers
             _tokenService = tokenService;
         }
 
+        [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto) 
         {
             // Check if model is valid (validations from RegisterDto)
@@ -67,6 +68,7 @@ namespace EasyChat.Api.Controllers
             });
         }
 
+        [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto) 
         {
             // Check if model is valid
