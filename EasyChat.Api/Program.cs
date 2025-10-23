@@ -1,4 +1,5 @@
 ﻿using EasyChat.Api.Data;
+using EasyChat.Api.Hubs;
 using EasyChat.Api.Services;
 using EasyChat.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -9,20 +10,33 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// CORS (single policy, NO wildcard)
+builder.Services.AddCors(o =>
+{
+    o.AddPolicy("client", p => p
+        .WithOrigins(
+            "http://127.0.0.1:5500"  //Live server
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials());        // SignalR uses credentials mode 'include'
+});
+
+// standard services
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
 
-// Add Database
+builder.Services.AddScoped<ITokenService, TokenService>();
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Identity for user management
 builder.Services.AddIdentity<IdentityUser, IdentityRole>()
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-// JWT Authentication
+// JWT, with token for SignalR
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 builder.Services.AddAuthentication(options =>
 {
@@ -42,19 +56,21 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(
             Encoding.UTF8.GetBytes(jwtSettings["SecretKey"]!))
     };
-});
 
-builder.Services.AddScoped<ITokenService, TokenService>();
-
-// CORS (for frontend to call this API)
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
+    options.Events = new JwtBearerEvents
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/chat"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 var app = builder.Build();
@@ -65,12 +81,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
-app.UseCors("AllowAll");          // Enable CORS
+app.UseCors("client");
 
-app.UseAuthentication();          // Check JWT tokens
-app.UseAuthorization();           // Check permissions
+app.UseAuthentication();
+app.UseAuthorization();
 
+app.MapHub<ChatHub>("/hubs/chat");
 app.MapControllers();
 
 app.Run();

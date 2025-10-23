@@ -1,0 +1,64 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+</head>
+<body>
+
+</body>
+</html>
+<script src="https://cdn.jsdelivr.net/npm/@microsoft/signalr/dist/browser/signalr.min.js"></script>
+<script>
+    //  Config 
+    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjViMzU1NjZhLTU5YzMtNDVkOS05ZDNiLTY4MTA0YjBiYjM4NyIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiJqb2huX2RvZSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL2VtYWlsYWRkcmVzcyI6ImpvaG5AZXhhbXBsZS5jb20iLCJqdGkiOiIxNGRjODg0MC0zYzZlLTQ1MTgtOTkyMi1iYmZmODA4ODYxYjkiLCJleHAiOjE3NjEyMzEwNDMsImlzcyI6IkVhc3lDaGF0IiwiYXVkIjoiRWFzeUNoYXRVc2VycyJ9.HndMUXg4gaP1Yk0a-nYERKWLDUsy1nqMpuOn1k49ZMs"; // keep yours
+    const hubUrl = "https://localhost:7159/hubs/chat?access_token=" + encodeURIComponent(token);
+
+    // Tesst Room Id
+    const roomId = "11111111-1111-1111-1111-111111111111";
+
+    //  Connection 
+    const conn = new signalR.HubConnectionBuilder()
+        .withUrl(hubUrl)
+        .withAutomaticReconnect()
+        .build();
+
+    // Events
+    conn.on("JoinedRoom", id => console.log("Joined room:", id));
+    conn.on("LeftRoom", id => console.log("Left room:", id));
+    conn.off("MessageReceived"); // clear any old handlers
+    conn.on("MessageReceived", (m) => {
+        console.log("raw message:", m); // see actual keys
+        console.log(`[${m.sentAt}] ${m.senderId}: ${m.content}`);
+    });
+
+    conn.onreconnecting(err => console.log("reconnecting:", err));
+    conn.onreconnected(id => console.log("reconnected:", id));
+    conn.onclose(err => console.log("closed:", err));
+
+
+
+    // Join Room
+    conn.start()
+        .then(() => conn.invoke("JoinRoom", roomId))
+        .then(() => {
+            console.log("connected + joined");
+            // quick demo message
+            return conn.invoke("SendMessage", roomId, "Hello room 👋");
+        })
+        .catch(err => console.error("start/join error:", err));
+
+    // Expose helpers in console
+    window.ec = {
+        send: (text) => conn.invoke("SendMessage", roomId, text),
+        history: async () => {
+            const res = await fetch(`https://localhost:7159/api/rooms/${roomId}/messages`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            console.log("history:", data);
+            return data;
+        }
+    }
+</script>
+
