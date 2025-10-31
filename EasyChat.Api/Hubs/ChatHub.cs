@@ -22,8 +22,6 @@ public class ChatHub : Hub
 
     private static string GroupName(Guid roomId) => $"room:{roomId}";
 
-
-    // Join room, check it exists
     public async Task JoinRoom(Guid roomId)
     {
         // Ensure room exists 
